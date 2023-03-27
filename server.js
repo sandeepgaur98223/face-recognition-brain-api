@@ -56,18 +56,30 @@ app.get('/',(req,res)=>{
 })
 
 app.post('/signin',(req,res)=>{
- /*   bcrypt.compare("apples", '$2a$10$fxVZMoZtMGl/VhdB1/j9X.IvhmPjGFPSXRrPZbkLkr/UOQQHXgpFu', function(err, res) {
-        // res == true
-        console.log('first guess',res)
-    });
-    bcrypt.compare("veggies", '$2a$10$fxVZMoZtMGl/VhdB1/j9X.IvhmPjGFPSXRrPZbkLkr/UOQQHXgpFu', function(err, res) {
-        // res = false
-        console.log('second guess',res)
-    });
 
-    */
- //console.log(req.body)
+ db.select('email','hash')
+ .from('login') 
+ .where('email', '=', req.body.email)
+ .then(data=>{
+    const isValid=bcrypt.compareSync(req.body.password, data[0].hash);
+    if(isValid)
+    {
+       return db.select('*')
+        .from('users')
+        .where('email', '=', req.body.email)
+        .then(user=>{
+            res.json(user[0]);
+        })
+        .catch(err=>{res.status(400).json("unable to get user");})
+    }
+    else
+    {
+        res.status(400).json("error logging in");
+    }
+})
+.catch(err=>{res.status(400).json("error logging in")})
 
+/*
     if(req.body.email===database.users[0].email &&
         req.body.password===database.users[0].password)
         {
@@ -78,35 +90,48 @@ app.post('/signin',(req,res)=>{
         {
             res.status(400).json("error logging in");
         }
+         */
        //console.log(req.body.json());
    // res.json("Inside the sign In");
+
+
 })
 
 
 app.post('/register',(req,res)=>{
-   // res.send('Inside the register');
-    //console.log(req.body);
+
    const {email,name,password}=req.body;
-    //console.log(email,name,password);
-  /*  bcrypt.hash(password, null, null, function(err, hash) {
-        // Store hash in your password DB.
-        console.log(hash);
-    });
-    */
-   db('users')
-   .returning('*')
-   .insert({
-    email:email,
-    name:name,
-    joined: new Date()
-   }).then(user=>{
-    res.json(user[0]) 
-    /*user[0] just to make sure that 
-    we are returning an object and not an array.
-    And anways, when a user is registering, 
-    he will register only one user at a time, so user[0] makes sense.
-    */ 
-   })
+   const hash = bcrypt.hashSync(password);
+
+   db.transaction(trx=>{ 
+    /*transaction is something: when one query fails, all query fails*/
+    trx.insert({
+        hash:hash,
+        email:email
+    })
+    .into('login')
+    .returning('email')
+    .then(loginemail=>{
+       return trx('users')
+        .returning('*')
+        .insert({
+         email:loginemail[0].email,
+         name:name,
+         joined: new Date()
+        }).then(user=>{
+         res.json(user[0]) 
+         /*user[0] just to make sure that 
+         we are returning an object and not an array.
+         And anways, when a user is registering, 
+         he will register only one user at a time, so user[0] makes sense.
+         */ 
+        })
+    })
+    .then(trx.commit)
+    .catch(trx.rollback)
+
+   }
+   )
    .catch(err=>{res.status(400).json('unable to register')})
 
 
