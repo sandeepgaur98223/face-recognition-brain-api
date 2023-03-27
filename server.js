@@ -2,6 +2,24 @@ import express from 'express';
 import bodyparser from 'body-parser';
 import bcrypt from 'bcrypt-nodejs';
 import cors from 'cors';
+import knex from 'knex';
+
+const db=knex({
+    client: 'pg',
+    connection: {
+      host : '127.0.0.1',
+      port : 5432,
+      user : 'postgres',
+      password : 'dbpass',
+      database : 'smart-brain'
+    }
+  });
+
+
+  /*
+db.select('*').table('users')
+.then(data=>{console.log(data)}); 
+ */
 
 const app=express();
 
@@ -31,6 +49,7 @@ const database={
 
     ]
 }
+
 
 app.get('/',(req,res)=>{
    res.send(database.users);
@@ -69,24 +88,29 @@ app.post('/register',(req,res)=>{
     //console.log(req.body);
    const {email,name,password}=req.body;
     //console.log(email,name,password);
-    bcrypt.hash(password, null, null, function(err, hash) {
+  /*  bcrypt.hash(password, null, null, function(err, hash) {
         // Store hash in your password DB.
         console.log(hash);
     });
+    */
+   db('users')
+   .returning('*')
+   .insert({
+    email:email,
+    name:name,
+    joined: new Date()
+   }).then(user=>{
+    res.json(user[0]) 
+    /*user[0] just to make sure that 
+    we are returning an object and not an array.
+    And anways, when a user is registering, 
+    he will register only one user at a time, so user[0] makes sense.
+    */ 
+   })
+   .catch(err=>{res.status(400).json('unable to register')})
 
-    database.users.push(
-        {
-            id:'125',
-            name:name,
-            email:email,
-            password:password,
-            entries:0,
-            joined: new Date()
 
-        }
-
-    );
-    res.json(database.users[database.users.length-1]);
+   // res.json(database.users[database.users.length-1]);
   //  console.log(database.users);
 
 })
@@ -94,24 +118,44 @@ app.post('/register',(req,res)=>{
 app.get('/profile/:id',(req,res)=>{
     const {id}=req.params;
     let found=false;
-    database.users.forEach(user=>{
-        if(user.id===id)
+    
+    db.select('*').from('users')
+    .where({id:id})
+    .then(user=>{
+        console.log(user);
+        if(user.length)
         {
-            found=true;
-            res.json(user);
-        }
-    }
-    )
-    if(!found)
-    {
-        res.status(404).json('There is no such user');
+            res.json(user[0]);
 
-    }
+        }
+        else
+        {
+            res.status(400).json('User not found');
+        }
+        
+    })
+    .catch(err=>{res.status(400).json('error finding user');})
 
 })
 
 app.put('/image',(req,res)=>{
-    const {id}=req.body;
+
+const {id}=req.body;
+
+
+
+
+db('users')
+  .where('id', '=', id)
+  .increment('entries',1)
+  .returning('entries')
+  .then(entries=>{
+    res.json(entries[0].entries);
+  })
+  .catch(err=>{res.status(400).json('unable to get count')})
+  ;
+
+    /*
     let found=false;
     database.users.forEach(user=>{
         if(user.id===id)
@@ -126,7 +170,7 @@ app.put('/image',(req,res)=>{
     {
         res.status(404).json('There is no such user');
 
-    }
+    }*/
 })
 
 /*
@@ -146,7 +190,7 @@ bcrypt.compare("veggies", hash, function(err, res) {
 
 
 app.listen(3001,()=>{
-    console.log("app is running on Port 3000")
+    console.log("app is running on Port 3001")
 })
 
 //test
