@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt-nodejs';
 import cors from 'cors';
 import knex from 'knex';
 
+
 const db=knex({
     client: 'pg',
     connection: {
@@ -103,6 +104,12 @@ app.post('/register',(req,res)=>{
    const {email,name,password}=req.body;
    const hash = bcrypt.hashSync(password);
 
+   if(!email||!name||!password)
+   {
+    res.status(400).json('All the fields should be filled')
+   }
+   else
+   {
    db.transaction(trx=>{ 
     /*transaction is something: when one query fails, all query fails*/
     trx.insert({
@@ -133,10 +140,7 @@ app.post('/register',(req,res)=>{
    }
    )
    .catch(err=>{res.status(400).json('unable to register')})
-
-
-   // res.json(database.users[database.users.length-1]);
-  //  console.log(database.users);
+}
 
 })
 
