@@ -216,12 +216,15 @@ bcrypt.compare("veggies", hash, function(err, res) {
 });
 
 */
+const port = process.env.PORT || 3001;
 
+app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
+/*
 app.listen(process.env.PORT || 443,()=>{
     console.log(`app is running on Port ${process.env.PORT}`)
 })
-
+*/
 //test
 
 /*Endpoints:
