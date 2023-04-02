@@ -8,11 +8,13 @@ import knex from 'knex';
 const db=knex({
     client: 'pg',
     connection: {
-      host : '127.0.0.1',
+      connectionString:process.env.DATABASEURL,
+      ssl:{rejectUnauthorized:false},
+      host : process.env.DATABASEHOST,
       port : 5432,
-      user : 'postgres',
-      password : 'dbpass',
-      database : 'smart-brain'
+      user : process.env.DATABASEUSER,
+      password : process.env.DATABASEPW,
+      database : process.env.DATABASEDB
     }
   });
 
